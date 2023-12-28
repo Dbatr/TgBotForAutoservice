@@ -1,5 +1,3 @@
-import random
-
 import mysql.connector
 import telebot
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -9,26 +7,13 @@ from telebot import types
 from config import TOKEN, CHAT_IDS, DB_HOST, DB_USER, DB_PASSWORD, DB_DATABASE, DB_TABLE
 
 
-# Инициализация Telegram бота
+# Инициализация Telegram бота и планировщика
 bot = telebot.TeleBot(TOKEN)
-
-# Инициализация планировщика
 scheduler = BackgroundScheduler()
 
 # Переменная для отслеживания последнего отправленного уведомления
 last_sent_notification_id = None
 
-# Команда для отображения доступных методов
-@bot.message_handler(commands=['help'])
-def help_handler(message):
-    help_text = (
-        "Доступные команды:\n"
-        "/start - Начать диалог и приветственное сообщение\n"
-        "/add_order - Добавить новую запись в базу данных\n"
-        "/last_orders - Посмотреть последние 10 заказов\n"
-        "/help - Показать доступные команды"
-    )
-    bot.send_message(message.chat.id, help_text)
 
 # Функция для подключения к базе данных MySQL
 def connect():
@@ -46,57 +31,56 @@ def connect():
         return None
 
 
-
+# Команда для отображения доступных методов
+@bot.message_handler(commands=['help'])
+def help_handler(message):
+    help_text = (
+        "Доступные команды:\n"
+        "/start - Начать диалог и приветственное сообщение\n"
+        "/add_order - Добавить новую запись в базу данных\n"
+        "/last_orders - Посмотреть последние 10 заказов\n"
+        "/help - Показать доступные команды"
+    )
+    bot.send_message(message.chat.id, help_text)
 
 
 # Словарь для хранения временных данных о пользователе
 user_data = {}
+
 
 @bot.message_handler(commands=['start'])
 def start_handler(message):
     # Отправляем приветственное сообщение и начинаем диалог
     bot.send_message(message.chat.id, "Привет! Чтобы увидеть все команды пропишите команду /help.")
 
+
 @bot.message_handler(commands=['add_order'])
 def add_order_start_handler(message):
-    # Сбрасываем временные данные о пользователе
     user_data[message.chat.id] = {}
-
-    # Отправляем запрос на ввод имени
     bot.send_message(message.chat.id, "Введите ваше имя:")
-
-    # Устанавливаем следующий шаг обработчика в функцию, которая будет ожидать ввод имени
     bot.register_next_step_handler(message, process_name_input)
+
 
 # Определение функции, которая будет вызвана после ввода имени
 def process_name_input(message):
     user_data[message.chat.id]['name'] = message.text
-
-    # Отправляем запрос на ввод фамилии
     bot.send_message(message.chat.id, "Введите вашу фамилию:")
-
-    # Устанавливаем следующий шаг обработчика в функцию, которая будет ожидать ввод фамилии
     bot.register_next_step_handler(message, process_surname_input)
+
 
 # Определение функции, которая будет вызвана после ввода фамилии
 def process_surname_input(message):
     user_data[message.chat.id]['surname'] = message.text
-
-    # Отправляем запрос на ввод номера телефона
     bot.send_message(message.chat.id, "Введите ваш номер телефона:")
-
-    # Устанавливаем следующий шаг обработчика в функцию, которая будет ожидать ввод номера телефона
     bot.register_next_step_handler(message, process_phone_input)
+
 
 # Определение функции, которая будет вызвана после ввода номера телефона
 def process_phone_input(message):
     user_data[message.chat.id]['phone'] = message.text
-
-    # Отправляем запрос на ввод описания проблемы
     bot.send_message(message.chat.id, "Введите описание проблемы:")
-
-    # Устанавливаем следующий шаг обработчика в функцию, которая будет ожидать ввод описания проблемы
     bot.register_next_step_handler(message, process_description_input)
+
 
 # Определение функции для получения максимального id из таблицы
 def get_max_id(connection):
@@ -110,6 +94,7 @@ def get_max_id(connection):
         print(f"Ошибка: {e}")
     finally:
         cursor.close()
+
 
 # Определение функции, которая будет вызвана после ввода описания проблемы
 def process_description_input(message):
@@ -142,14 +127,6 @@ def process_description_input(message):
             bot.send_message(message.chat.id, "Произошла ошибка при добавлении записи. Пожалуйста, попробуйте снова.")
         finally:
             cursor.close()
-
-
-
-
-
-
-
-
 
 
 # Функция для получения последней записи из таблицы
@@ -218,11 +195,13 @@ def send_notification():
                     except Exception as e:
                         print(f"Ошибка отправки уведомления: {e}")
 
+
 # Обработчик инлайн-кнопки
 @bot.callback_query_handler(func=lambda call: True)
 def callback_handler(call):
     if call.data == "last_orders":
         last_orders_handler(call.message)
+
 
 # Команда для просмотра последних 10 заказов
 @bot.message_handler(commands=['last_orders'])
