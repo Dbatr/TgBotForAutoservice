@@ -216,7 +216,13 @@ def last_orders_handler(message):
 
             response_text = "Последние 10 заказов:\n"
             for order in orders:
-                response_text += f"ID: {order[0]}\nИмя: {order[5]}\nФамилия: {order[3]}\nТелефон: {order[4]}\nОписание проблемы: {order[2]}\n\n"
+                status = "Выполнено" if order[1] == 1 else "Не выполнено"
+                response_text += (f"ID: {order[0]}\n"
+                                  f"Имя: {order[5]}\n"
+                                  f"Фамилия: {order[3]}\n"
+                                  f"Телефон: {order[4]}\n"
+                                  f"Описание проблемы: {order[2]}\n"
+                                  f"Статус: {status}\n\n")
 
             bot.send_message(message.chat.id, response_text)
         except Error as e:
@@ -225,7 +231,7 @@ def last_orders_handler(message):
             cursor.close()
 
 
-# Запуск планировщика для выполнения задачи каждую секунду
+# Запуск планировщика для выполнения задачи каждые 5 секунд
 scheduler.add_job(send_notification, 'interval', seconds=5)
 scheduler.start()
 
